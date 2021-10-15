@@ -1,0 +1,84 @@
+---
+title: "Project 2"
+author: "Ipsita Datta & Victoria Seng"
+date: "10/15/2021"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Introduction
+
+VICTORIA TODO: describe data set and vars we are working with (target = shares) and mention purpose of analysis methods
+
+I'll add more here once we get a feel for which vars we want to work with and for our models
+
+## Data
+
+```{r libs, echo = FALSE}
+library(tidyverse)
+library(caret)
+```
+
+Importing the data and grabbing a vector of the data channels for later use.
+
+```{r data_import_subset}
+newsPop <- read_csv("./Data/OnlineNewsPopularity.csv")
+
+newsChannels <- newsPop %>%
+  select(starts_with("data_channel_is_")) %>%
+    names
+
+names
+```
+
+Subsetting the data by 'bus' first
+
+```{r subset_bus}
+bus <- newsPop %>%
+  filter(data_channel_is_bus == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+## Summarizations
+
+TODO: three graphs apiece and "some" summary statistics each. Let's try both doing a contingency table and a couple of summary stats.
+
+I'm going to work with weekday a bit so need to transpose to make it easier to work with.
+
+```{r transpose_weekdays}
+busTP <- bus %>%
+  pivot_longer(starts_with("weekday_is"), names_to = "wd", values_to = "wdVal") %>%
+    filter(wdVal == TRUE) %>%
+      mutate(weekday = substr(wd, 12, nchar(wd))) %>%
+        select(-wd, -wdVal) 
+```
+
+This contingency table shows the overall number of shares by weekday. A higher number means more shares have happened on that day.
+
+```{r weekday_contingency}
+GDAtools::wtable(busTP$weekday, w = busTP$shares)
+```
+
+Here are some summary stats by weekday. Again, bigger means more shares.
+
+```{r weekday_summaries}
+busTP %>%
+  group_by(weekday) %>%
+    summarize(min = min(shares), mean = mean(shares), median = median(shares), iqr = IQR(shares), max = max(shares))
+```
+
+## Modeling
+
+IPSITA TODO: Brief explanation of the idea of a linera regression model
+
+IPSITA TODO: Fit linear regression and random forest model
+
+VICTORIA TODO: Fit linear regression and boosted tree model
+
+## Comparison
+
+## Automation
+
+Vic note: I'm ok with doing either automation or the comparison, so let me know which one you'd be more comfortable tackling. 
