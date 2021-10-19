@@ -28,11 +28,41 @@ names
 
     ## function (x)  .Primitive("names")
 
-Subsetting the data by ‘bus’ first
+Subsetting the data by the type of data channels :
 
 ``` r
 bus <- newsPop %>%
   filter(data_channel_is_bus == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+``` r
+lifestyle<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+``` r
+ entertainment<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+``` r
+ socmed<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+``` r
+ tech<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+``` r
+ world<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
     select(-starts_with("data_channel_is_"))
 ```
 

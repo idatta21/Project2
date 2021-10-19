@@ -33,11 +33,41 @@ newsChannels <- newsPop %>%
 names
 ```
 
-Subsetting the data by 'bus' first
+Subsetting the data by the type of data channels :
 
 ```{r subset_bus}
 bus <- newsPop %>%
   filter(data_channel_is_bus == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+```{r subset_lifestyle}
+lifestyle<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+```{r subset_entertainment}
+ entertainment<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+```{r subset_socmed}
+ socmed<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+```{r subset_tech}
+ tech<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
+    select(-starts_with("data_channel_is_"))
+```
+
+```{r subset_world}
+ world<-newsPop %>%
+  filter(data_channel_is_lifestyle == TRUE) %>%
     select(-starts_with("data_channel_is_"))
 ```
 
