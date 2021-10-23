@@ -21,6 +21,7 @@ library(tidyverse)
 library(caret)
 library(randomForest)
 library(gbm)
+set.seed(300)
 ```
 
 Importing the data and grabbing a vector of the data channels for later use.
@@ -118,7 +119,12 @@ g1 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
        color = "Weekend? (1 = Yes, 0 = No)") + 
     scale_y_continuous(labels = scales::comma) 
 ```
-
+## spliting data in train(70%) and test (30%)
+```{r split_data}
+TPIndex <- createDataPartition(y =TP$shares , p= 0.7, list = FALSE)
+TP_Train <- TP[TPIndex,]
+TP_Test <- TP[-TPIndex,]
+```
 
 ## Modeling
 
