@@ -129,9 +129,21 @@ TP_Test <- TP[-TPIndex,]
 ## Modeling
 
 IPSITA TODO: Brief explanation of the idea of a linear regression model
-
+A linear regression model describes the relationship between a dependent variable, y, and one or more independent variables, X.
+Linear models are a way of describing a response variable in terms of a linear combination of predictor variables. The response should be a continuous variable and be at least approximately normally distributed. Such models find wide application, but cannot handle clearly discrete or skewed continuous responses.
 IPSITA TODO: Fit linear regression and random forest model
-
+```{r Linear_Regression_randomforest}
+# need to work on the models
+lmfit<-train(shares ~ kw_max_max +I(kw_max_max^2), data = TP_Train, 
+         method = "lm", 
+         preProcess = c("center", "scale"),
+         trControl = trainControl(method = "cv", number = 10))
+randomforestFit <- train(shares ~ ., data = TP_Train,
+               method = "rf",
+               preProcess = c("center", "scale"),
+               trControl = trainControl(method = "cv",number = 5),
+               tuneGrid = data.frame(mtry = seq(1,10,1)))
+```
 VICTORIA TODO: Fit linear regression and boosted tree model
 
 ## Comparison
