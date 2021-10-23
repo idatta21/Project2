@@ -23,46 +23,17 @@ newsChannels <- newsPop %>%
   select(starts_with("data_channel_is_")) %>%
     names
 
-names
+newsChannels
 ```
 
-    ## function (x)  .Primitive("names")
+    ## [1] "data_channel_is_lifestyle"     "data_channel_is_entertainment" "data_channel_is_bus"           "data_channel_is_socmed"       
+    ## [5] "data_channel_is_tech"          "data_channel_is_world"
 
 Subsetting the data by the type of data channels :
 
 ``` r
 bus <- newsPop %>%
   filter(data_channel_is_bus == TRUE) %>%
-    select(-starts_with("data_channel_is_"))
-```
-
-``` r
-lifestyle<-newsPop %>%
-  filter(data_channel_is_lifestyle == TRUE) %>%
-    select(-starts_with("data_channel_is_"))
-```
-
-``` r
- entertainment<-newsPop %>%
-  filter(data_channel_is_lifestyle == TRUE) %>%
-    select(-starts_with("data_channel_is_"))
-```
-
-``` r
- socmed<-newsPop %>%
-  filter(data_channel_is_lifestyle == TRUE) %>%
-    select(-starts_with("data_channel_is_"))
-```
-
-``` r
- tech<-newsPop %>%
-  filter(data_channel_is_lifestyle == TRUE) %>%
-    select(-starts_with("data_channel_is_"))
-```
-
-``` r
- world<-newsPop %>%
-  filter(data_channel_is_lifestyle == TRUE) %>%
     select(-starts_with("data_channel_is_"))
 ```
 
@@ -75,7 +46,7 @@ I’m going to work with weekday a bit so need to transpose to make it
 easier to work with.
 
 ``` r
-busTP <- bus %>%
+TP <- bus %>%
   pivot_longer(starts_with("weekday_is"), names_to = "wd", values_to = "wdVal") %>%
     filter(wdVal == TRUE) %>%
       mutate(weekday = substr(wd, 12, nchar(wd))) %>%
@@ -86,7 +57,7 @@ This contingency table shows the overall number of shares by weekday. A
 higher number means more shares have happened on that day.
 
 ``` r
-GDAtools::wtable(busTP$weekday, w = busTP$shares)
+GDAtools::wtable(TP$weekday, w = TP$shares)
 ```
 
     ##    friday    monday  saturday    sunday  thursday   tuesday wednesday       Sum 
@@ -95,7 +66,7 @@ GDAtools::wtable(busTP$weekday, w = busTP$shares)
 Here are some summary stats by weekday. Again, bigger means more shares.
 
 ``` r
-busTP %>%
+TP %>%
   group_by(weekday) %>%
     summarize(min = min(shares), mean = mean(shares), median = median(shares), iqr = IQR(shares), max = max(shares))
 ```
@@ -111,9 +82,45 @@ busTP %>%
     ## 6 tuesday      44 2932.   1300 1387  310800
     ## 7 wednesday    63 2677.   1300 1312  158900
 
+Here is a boxplot of shares by weekend status. I hate how squashed it is
+and need to find a way to programatically deal with outliers.
+
+``` r
+g <- ggplot(data = bus, aes(x = as_factor(is_weekend), y = shares, group = as_factor(is_weekend)))
+g + geom_jitter(aes(color = as_factor(is_weekend))) +
+  geom_boxplot() +
+      labs(x = "Weekend Status (1 = Weekend, 0 = Weekday)", 
+           y = "Number of Shares", 
+           title = "Box Plot with Jitter of Shares by Weekend Status") +
+        scale_y_continuous(labels = scales::comma, expand = expansion(mult = c(0,0)))
+```
+
+![](./images/weekend_box-1.png)<!-- -->
+
+Here is a scatter plot of shares v positive word rate with a grouping on
+weekday/weekend. The Y axis represents shares. More points higher on the
+Y axis on the lefthand side of the graph indicate less positive articles
+getting more shares. More points higher on the Y axis on the righthand
+side of the graph indicate more positive articles getting more shares.
+The prevelence of one color over another in any part of the graph is
+indicative of whether the article was published on a weekday or a
+weekend.
+
+``` r
+g <- ggplot(data = bus, aes(rate_positive_words, shares))
+g + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") + 
+  labs(x = "Rate Positive Words", 
+       y = "Number of Shares", 
+       title = "Positive Word Rate vs Number of Shares by Weekday Status",
+       color = "Weekend? (1 = Yes, 0 = No)") + 
+    scale_y_continuous(labels = scales::comma)
+```
+
+![](./images/pos_v_share-1.png)<!-- -->
+
 ## Modeling
 
-IPSITA TODO: Brief explanation of the idea of a linera regression model
+IPSITA TODO: Brief explanation of the idea of a linear regression model
 
 IPSITA TODO: Fit linear regression and random forest model
 
