@@ -77,8 +77,48 @@ TODO: three graphs apiece and "some" summary statistics each. Let's try both doi
 
 I'm going to work with weekday a bit so need to transpose to make it easier to work with.
 
-```{r transpose_weekdays}
+```{r transpose_weekdays_bus}
 busTP <- bus %>%
+  pivot_longer(starts_with("weekday_is"), names_to = "wd", values_to = "wdVal") %>%
+    filter(wdVal == TRUE) %>%
+      mutate(weekday = substr(wd, 12, nchar(wd))) %>%
+        select(-wd, -wdVal) 
+```
+
+```{r transpose_weekdays_lifestyle}
+lifestyleTP <- lifestyle %>%
+  pivot_longer(starts_with("weekday_is"), names_to = "wd", values_to = "wdVal") %>%
+    filter(wdVal == TRUE) %>%
+      mutate(weekday = substr(wd, 12, nchar(wd))) %>%
+        select(-wd, -wdVal) 
+```
+
+```{r transpose_weekdays_entertainment}
+entertainmentTP <- entertainment %>%
+  pivot_longer(starts_with("weekday_is"), names_to = "wd", values_to = "wdVal") %>%
+    filter(wdVal == TRUE) %>%
+      mutate(weekday = substr(wd, 12, nchar(wd))) %>%
+        select(-wd, -wdVal) 
+```
+
+```{r transpose_weekdays_socmed}
+socmedTP <- socmed %>%
+  pivot_longer(starts_with("weekday_is"), names_to = "wd", values_to = "wdVal") %>%
+    filter(wdVal == TRUE) %>%
+      mutate(weekday = substr(wd, 12, nchar(wd))) %>%
+        select(-wd, -wdVal) 
+```
+
+```{r transpose_weekdays_tech}
+techTP <- tech %>%
+  pivot_longer(starts_with("weekday_is"), names_to = "wd", values_to = "wdVal") %>%
+    filter(wdVal == TRUE) %>%
+      mutate(weekday = substr(wd, 12, nchar(wd))) %>%
+        select(-wd, -wdVal) 
+```
+
+```{r transpose_weekdays_world}
+worldTP <- world %>%
   pivot_longer(starts_with("weekday_is"), names_to = "wd", values_to = "wdVal") %>%
     filter(wdVal == TRUE) %>%
       mutate(weekday = substr(wd, 12, nchar(wd))) %>%
@@ -87,8 +127,28 @@ busTP <- bus %>%
 
 This contingency table shows the overall number of shares by weekday. A higher number means more shares have happened on that day.
 
-```{r weekday_contingency}
+```{r weekday_contingency_bus}
 GDAtools::wtable(busTP$weekday, w = busTP$shares)
+```
+
+```{r weekday_contingency_lifestyle}
+GDAtools::wtable(lifestyleTP$weekday, w = lifestyleTP$shares)
+```
+
+```{r weekday_contingency_entertainment}
+GDAtools::wtable(entertainmentTP$weekday, w = entertainmentTP$shares)
+```
+
+```{r weekday_contingency_tech}
+GDAtools::wtable(techTP$weekday, w = techTP$shares)
+```
+
+```{r weekday_contingency_socmed}
+GDAtools::wtable(socmedTP$weekday, w = socmedTP$shares)
+```
+
+```{r weekday_contingency_world}
+GDAtools::wtable(worldTP$weekday, w = worldTP$shares)
 ```
 
 Here are some summary stats by weekday. Again, bigger means more shares.
