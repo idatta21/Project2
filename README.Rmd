@@ -17,12 +17,13 @@ I'll add more here once we get a feel for which vars we want to work with and fo
 ## Data
 
 ```{r libs, echo = FALSE}
-#install.packages("corrplot")
+#install.packages("Rtools")
 library(tidyverse)
 library(caret)
 library(randomForest)
 library(gbm)
 library(corrplot)
+library(plotrix)
 set.seed(300)
 ```
 
@@ -35,6 +36,16 @@ newsChannels <- newsPop %>%
     names
 newsChannels
 ```
+Transpose newsPop data to create pie chart across all the data channels
+```{r newsPop_TP}
+newsPop_TP <- newsPop %>%
+  pivot_longer(starts_with("data_channel_is_"), names_to = "dc", values_to = "dcVal") %>%
+    filter(dcVal == TRUE) %>%
+      mutate(datachannel = substr(dc, 17, nchar(dc))) %>%
+        select(datachannel,shares,-dc, -dcVal) 
+
+```
+
 Subsetting the data by the type of data channels :
 
 ```{r subset_bus}
@@ -83,6 +94,15 @@ A higher number  means  more best keywords tend to be shared more often by weekd
 TP %>%
   group_by(weekday) %>%
     summarize(min = min(kw_max_max), mean = mean(kw_max_max), median = median(kw_max_max), stddev=sd(kw_max_max),iqr = IQR(kw_max_max), max = max(kw_max_max))
+```
+Here is the pie chart showing overall which datachannel is doing best
+```{r piechart}
+df<-newsPop_TP %>% group_by(datachannel) %>% summarise_each(funs(sum))
+pct <- round(df$shares/sum(df$shares)*100)
+lbls <- paste(df$datachannel, pct) # add percents to labels
+lbs<-paste(lbls,"%",sep="")
+pie3D(df$shares,labels=lbs,explode=0.1,
+   main="Pie Chart of Shares across datachannels ")
 ```
 Here is the bar plot showing bestkeyword shares by weekdays.Heigher means
 for bestkeyword shares on that day
