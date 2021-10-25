@@ -190,17 +190,16 @@ round(cor(bus_numeric),2)
 busIndex <- createDataPartition(y =bus$shares , p= 0.7, list = FALSE)
 bus_Train <- bus[busIndex,]
 bus_Test <- bus[-busIndex,]
+
 ```
 
-## Modeling
-
+## Linear Regression Modeling
 IPSITA TODO: Brief explanation of the idea of a linear regression model
 #######I will describe this later
 A linear regression model describes the relationship between a dependent variable and one or more independent variables.
 Linear models are a way of describing a response variable in terms of a linear combination of predictor variables.  
-IPSITA TODO: Fit linear regression and random forest model
 
-```{r Linear_Regression_randomforest,echo=FALSE}
+```{r Linear_Regression,echo=FALSE}
 # need to work on the models
 #lmfit<-train(shares ~ kw_max_max +I(kw_max_max^2), data = TP_Train, 
  #        method = "lm", 
@@ -212,7 +211,20 @@ IPSITA TODO: Fit linear regression and random forest model
 #               trControl = trainControl(method = "cv",number = 5),
 #              tuneGrid = data.frame(mtry = seq(1,10,1)))
 ```
-VICTORIA TODO: Fit linear regression and boosted tree model
+VICTORIA TODO: Fit linear regression and
+
+## Ensemble tree-based modeling
+To do an ensemble tree-based model,we created a new column called popularity and add it to the trsining and test dataset.If the number of shares is greater than 2500, then popularity is equal to 1 (popular) , otherwise 0 (unpopular).
+```{r add_binary_column}
+Train_glm<- bus_Train %>% 
+            mutate(popularity = if_else((shares >= 1500),1,0)) %>%
+            select(-shares)
+Test_glm<-bus_Test %>%
+          mutate(popularity = if_else((shares >= 1500),1,0)) %>%
+          select(-shares) 
+```
+IPSITA TODO:randomforest model
+VICTORIA TODO:  boosted tree model
 
 ## Comparison
 
