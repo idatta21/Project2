@@ -169,7 +169,7 @@ g1 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
 ```
 Here is the scatter plot showing poins in the middle has more share as a function of number of words in the title. On Left of the graph with less word in the 
 title has less share by weekdays
-```{r}
+```{r wordsIntitle}
 g2 <- ggplot(data = bus, aes(n_tokens_title, shares))
 g2 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") + 
   labs(x = "Number of words in the title", 
@@ -180,41 +180,49 @@ g2 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
 ```
 To find correlation coefficient between shares and other variable,subsetting
 dataset with only numeric variables
-```{r TP_numeric}
+```{r TP_numeric_correlation}
 bus_numeric<-dplyr::select_if(bus,is.numeric)
 
-round(cor(bus_numeric),2)
+
+
 ```
 ## spliting data in train(70%) and test (30%)
 ```{r split_data}
-busIndex <- createDataPartition(y =bus$shares , p= 0.7, list = FALSE)
-bus_Train <- bus[busIndex,]
-bus_Test <- bus[-busIndex,]
+Index <- createDataPartition(y =bus$shares , p= 0.7, list = FALSE)
+Train <- bus[Index,] %>% select (-url)
+Test <- bus[-Index,] %>% select (-url)
 
 ```
 
 ## Linear Regression Modeling
-IPSITA TODO: Brief explanation of the idea of a linear regression model
-#######I will describe this later
-A linear regression model describes the relationship between a dependent variable and one or more independent variables.
-Linear models are a way of describing a response variable in terms of a linear combination of predictor variables.  
+
+### Brief explanation of the idea of a linear regression model
+
+A linear regression model describes the relationship between a dependent
+variable and one or more independent variables.i.e y=beta0+beta1 * x1+beta2 * x2 +....+betan * xn where y is dependent response variable and x1 to xn 
+are independent variable (also called predictors)
+Linear models are a way of describing a response variable in terms of a linear 
+combination of predictor variables.  
 
 ```{r Linear_Regression,echo=FALSE}
-# need to work on the models
-#lmfit<-train(shares ~ kw_max_max +I(kw_max_max^2), data = TP_Train, 
- #        method = "lm", 
-  #       preProcess = c("center", "scale"),
-   #      trControl = trainControl(method = "cv", number = 10))
-#randomforestFit <- train(shares ~ ., data = TP_Train,
-#               method = "rf",
-#               preProcess = c("center", "scale"),
-#               trControl = trainControl(method = "cv",number = 5),
-#              tuneGrid = data.frame(mtry = seq(1,10,1)))
+
+lmfit<-train(shares ~ num_hrefs+kw_max_avg+weekday_is_saturday+weekday_is_sunday+
++title_subjectivity+global_sentiment_polarity+LDA_01+LDA_04+rate_positive_words+
+num_imgs+num_videos,
+             data = Train, 
+        method = "lm", 
+       preProcess = c("center", "scale"),
+      trControl = trainControl(method = "cv", number = 10))
+```
+Performance on Test data set for Linear Regression model
+```{r lm_Test}
+pred <- predict(lmfit, newdata =Test)
+round(postResample(pred, obs = Test$shares),4)
 ```
 VICTORIA TODO: Fit linear regression and
 
 ## Ensemble tree-based modeling
-To do an ensemble tree-based model,we created a new column called popularity and add it to the trsining and test dataset.If the number of shares is greater than 2500, then popularity is equal to 1 (popular) , otherwise 0 (unpopular).
+To do an ensemble tree-based model,we created a new column called popularity and add it to the training and test dataset.If the number of shares is greater than 2500, then popularity is equal to 1 (popular) , otherwise 0 (unpopular).
 ```{r add_binary_column}
 Train_glm<- bus_Train %>% 
             mutate(popularity = if_else((shares >= 1500),1,0)) %>%
