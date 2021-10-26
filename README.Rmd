@@ -8,11 +8,15 @@ date: "10/15/2021"
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, fig.path = "./images/")
 ```
 
+# Predicting News Article Popularity
+
 ## Introduction
 
-VICTORIA TODO: describe data set and vars we are working with (target = shares) and mention purpose of analysis methods
+This data set contains a selection of news articles in six different channels, along with attributes about those articles. Our goal is to fit and test the best model using the variables provided to predict the response, number of shares, for future articles. 
 
-I'll add more here once we get a feel for which vars we want to work with and for our models
+Predictors include day of the week on which the article was published, keywords in the title and body, videos and images in the article, polarity (positive and negative) of the title and content, and more. 
+
+We will do some exploratory analysis of the variables and fit four models: two linear regression models, and two ensemble tree-based models, a random forest and a boosted tree. 
 
 ## Data
 
@@ -27,39 +31,29 @@ library(plotrix)
 set.seed(300)
 ```
 
-Importing the data and grabbing a vector of the data channels for later use.
+First, we import the news popularity data csv. We'll also pull the channel names for later use.
 
 ```{r data_import_subset}
 newsPop <- read_csv("./Data/OnlineNewsPopularity.csv")
+
 newsChannels <- newsPop %>%
   select(starts_with("data_channel_is_")) %>%
     names
+
 newsChannels
 ```
 
-Transpose newsPop data to create pie chart across all the data channels
-```{r newsPop_TP}
-newsPop_TP <- newsPop %>%
-  pivot_longer(starts_with("data_channel_is_"), names_to = "dc", values_to = "dcVal") %>%
-    filter(dcVal == TRUE) %>%
-      mutate(datachannel = substr(dc, 17, nchar(dc))) %>%
-        select(datachannel,shares,-dc, -dcVal) 
-
-```
-
-Subsetting the data by the type of data channels :
+Next, we subset the business channel for use in the initial EDA and model fitting pre-automation.
 
 ```{r subset_bus}
 bus <- newsPop %>%
   filter(data_channel_is_bus == TRUE) %>%
-    select(-starts_with("data_channel_is_"), -url)
+    select(-starts_with("data_channel_is_"), -url, -timedelta)
 ```
 
 ## Summarizations
 
-TODO: three graphs apiece and "some" summary statistics each. Let's try both doing a contingency table and a couple of summary stats.
-
-I'm going to work with weekday a bit so need to transpose to make it easier to work with.
+For the first few summaries, we will use this transposed data that turns the binary weekday variables into one categorical varible.
 
 ```{r transpose_weekdays}
 TP <- bus %>%
@@ -70,7 +64,6 @@ TP <- bus %>%
 ```
 
 This contingency table shows the overall number of shares by weekday. A higher number means more shares have happened on that day.
-
 ```{r weekday_contingency}
 GDAtools::wtable(TP$weekday, w = TP$shares)
 ```
@@ -87,7 +80,6 @@ GDAtools::wtable(TP$weekday, w = TP$self_reference_max_shares)
 ```
 
 Here are some summary stats by weekday. Again, bigger means more shares.
-
 ```{r weekday_summaries}
 TP %>%
   group_by(weekday) %>%
@@ -99,6 +91,15 @@ A higher number  means  more best keywords tend to be shared more often by weekd
 TP %>%
   group_by(weekday) %>%
     summarize(min = min(kw_max_max), mean = mean(kw_max_max), median = median(kw_max_max), stddev=sd(kw_max_max),iqr = IQR(kw_max_max), max = max(kw_max_max))
+```
+
+Transpose newsPop data to create pie chart across all the data channels
+```{r newsPop_TP}
+newsPop_TP <- newsPop %>%
+  pivot_longer(starts_with("data_channel_is_"), names_to = "dc", values_to = "dcVal") %>%
+    filter(dcVal == TRUE) %>%
+      mutate(datachannel = substr(dc, 17, nchar(dc))) %>%
+        select(datachannel,shares,-dc, -dcVal) 
 ```
 
 Here is the pie chart showing overall which datachannel is doing best
@@ -120,6 +121,7 @@ plot1+ geom_col() +
   ggtitle("bestkeyword shares across weekdays")+
   scale_y_continuous(labels = scales::comma)
 ```
+
 ```{r share_weekdays_bar}
 plot2<-ggplot(TP,aes(x=weekday,y=shares,fill=weekday))
 plot2+ geom_col() + 
@@ -128,8 +130,7 @@ plot2+ geom_col() +
   scale_y_continuous(labels = scales::comma)
 ```
 
-Here is a boxplot of shares by weekend status. I hate how squashed it is and need to find a way to programatically deal with outliers. 
-
+Here is a boxplot with jitter of shares by weekend status. The lines on the box plot show quartile values by weekend status. 
 ```{r weekend_box}
 g <- ggplot(data = bus, aes(x = as_factor(is_weekend), y = shares, group = as_factor(is_weekend)))
 g + geom_jitter(aes(color = as_factor(is_weekend))) +
@@ -151,9 +152,11 @@ g + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
        color = "Weekend? (1 = Yes, 0 = No)") + 
     scale_y_continuous(labels = scales::comma)
 ```
+
 Here is the scatterplot showing number of images vs shares.
 From the graph , we can say less number of images have more shares.
 Specifically those articles has zero or one image.
+
 ```{r images_v_shares}
 g <- ggplot(data = bus, aes(num_imgs, shares))
 g + geom_point( position = "jitter") + 
@@ -163,6 +166,7 @@ g + geom_point( position = "jitter") +
        ) + 
     scale_y_continuous(labels = scales::comma)
 ```
+
 Here is a scatter plot of shares vs negative word rate with a grouping on weekday/weekend. The Y axis represents shares. More points higher on the Y axis on the lefthand side of the graph indicate less negative articles getting more shares. Less points higher on the Y axis on the righthand side of the graph indicate more negative articles getting less shares. The prevelence of one color over another in any part of the graph is indicative of whether the article was published on a weekday or a weekend.
 
 ```{r negative_words_V_shares_scatterplot}
@@ -174,8 +178,10 @@ g1 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
        color = "Weekend? (1 = Yes, 0 = No)") + 
     scale_y_continuous(labels = scales::comma) 
 ```
+
 Here is the scatter plot showing poins in the middle has more share as a function of number of words in the title. On Left of the graph with less word in the 
 title has less share by weekdays
+
 ```{r wordsIntitle}
 g2 <- ggplot(data = bus, aes(n_tokens_title, shares))
 g2 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") + 
@@ -185,44 +191,39 @@ g2 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
        color = "Weekend? (1 = Yes, 0 = No)") + 
     scale_y_continuous(labels = scales::comma) 
 ```
+
 To find correlation coefficient between shares and other variable,subsetting
 dataset with only numeric variables
+
 ```{r TP_numeric_correlation}
 bus_numeric<-dplyr::select_if(bus,is.numeric)
 
 
 
 ```
-## spliting data in train(70%) and test (30%)
-```{r split_data}
-<<<<<<< HEAD
-index <- createDataPartition(y =bus$shares , p= 0.7, list = FALSE)
-train <- bus[index,]
-test <- bus[-index,]
-=======
-Index <- createDataPartition(y =bus$shares , p= 0.7, list = FALSE)
-Train <- bus[Index,] %>% select (-url)
-Test <- bus[-Index,] %>% select (-url)
->>>>>>> 30aef5987dbacb4ae61a0f7162283f776967d373
 
-```
+This correlation plot visually shows the positive or negative correlation coefficient between the various predictor varibles. The larger the circle and more saturated the color, the stronger the correlation. Blue is negative, and red is positive.
 
 ```{r corrplot}
-
 c <- cor(bus %>% select(-shares))
 cp <- corrplot(c, order = 'AOE', cl.pos = 'n', tl.cex = 0.5)
 ```
 
+## Model Fitting
 
-## Linear Regression Modeling
+A linear regression model describes the relationship between a dependent variable and one or more independent variables, i.e y=beta0+beta1 * x1+beta2 * x2 +....+betan * xn where y is dependent response variable and x1 to xn are independent variable (also called predictors)
 
-### Brief explanation of the idea of a linear regression model
+Linear models are a way of describing a response variable in terms of a linear combination of predictor variables.  
 
-A linear regression model describes the relationship between a dependent
-variable and one or more independent variables.i.e y=beta0+beta1 * x1+beta2 * x2 +....+betan * xn where y is dependent response variable and x1 to xn 
-are independent variable (also called predictors)
-Linear models are a way of describing a response variable in terms of a linear 
-combination of predictor variables.  
+splitting data in train(70%) and test (30%)
+
+```{r split_data}
+Index <- createDataPartition(y =bus$shares , p= 0.7, list = FALSE)
+Train <- bus[Index,]
+Test <- bus[-Index,]
+```
+
+### First Linear Model
 
 ```{r Linear_Regression,echo=FALSE}
 
@@ -234,14 +235,17 @@ num_imgs+num_videos,
        preProcess = c("center", "scale"),
       trControl = trainControl(method = "cv", number = 10))
 ```
+
 Performance on Test data set for Linear Regression model
 ```{r lm_Test}
 pred <- predict(lmfit, newdata =Test)
 round(postResample(pred, obs = Test$shares),4)
 ```
 
-<<<<<<< HEAD
+### Second Linear Model
+
 This linear regression model chooses its predictors based on excluding any variable that has a correlation coefficient of above 0.3 or below -0.3 with any other variable. This should choose varibles for each channel.
+
 ```{r select_vars}
 cTib <- as_tibble(c) %>%
   mutate(v1 = names(as_tibble(c))) %>%
@@ -262,6 +266,7 @@ vTest <- vChan[-vIndex,]
 ```
 
 This is the model. It is pre-processed with centering and scaling and it uses 10-fold CV. The variables involved may vary from channel to channel.
+
 ```{r v_linreg}
 vMod <- train(
   shares ~ .,
@@ -270,29 +275,40 @@ vMod <- train(
   preProcess = c("center","scale"),
   trControl = trainControl(method = "cv", number = 10)
 )
+
+vPred <- predict(vMod, newdata = vTest)
+round(postResample(vPred, obs = vTest$shares), 4)
 ```
 
 ### Ensemble tree-based modeling
-To do an ensemble tree-based model,we created a new column called popularity and add it to the trsining and test dataset.If the number of shares is greater than 2500, then popularity is equal to 1 (popular) , otherwise 0 (unpopular).
-=======
-## Ensemble tree-based modeling
-To do an ensemble tree-based model,we created a new column called popularity and add it to the training and test dataset.If the number of shares is greater than 2500, then popularity is equal to 1 (popular) , otherwise 0 (unpopular).
->>>>>>> 30aef5987dbacb4ae61a0f7162283f776967d373
+
+To do an ensemble tree-based model,we created a new column called popularity and add it to the trsining and test dataset. If the number of shares is greater than 2500, then popularity is equal to 1 (popular) , otherwise 0 (unpopular).
+
 ```{r add_binary_column}
-Train_glm<- bus_Train %>% 
+Train_glm<- Train %>% 
             mutate(popularity = if_else((shares >= 1500),1,0)) %>%
             select(-shares)
-Test_glm<-bus_Test %>%
+Test_glm<- Test %>%
           mutate(popularity = if_else((shares >= 1500),1,0)) %>%
           select(-shares) 
 ```
 
 ### Boosted tree model
 
-I'm not sure how to calculate what's necessary for the tunegrid. WIll get back to this.
+```{r vBoostTree, echo = FALSE}
+vBoost <- train(
+  shares ~ ., 
+  data = Train,
+  method = "gbm",
+  preProcess = c("center", "scale"),
+  trControl = trainControl(method = "repeatedcv", number = 5, repeats = 3)
+)
+```
 
 ## Comparison
 
+ID
+
 ## Automation
 
-Vic note: I'm ok with doing either automation or the comparison, so let me know which one you'd be more comfortable tackling. 
+VS
