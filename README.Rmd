@@ -36,6 +36,7 @@ newsChannels <- newsPop %>%
     names
 newsChannels
 ```
+
 Transpose newsPop data to create pie chart across all the data channels
 ```{r newsPop_TP}
 newsPop_TP <- newsPop %>%
@@ -51,7 +52,7 @@ Subsetting the data by the type of data channels :
 ```{r subset_bus}
 bus <- newsPop %>%
   filter(data_channel_is_bus == TRUE) %>%
-    select(-starts_with("data_channel_is_"))
+    select(-starts_with("data_channel_is_"), -url)
 ```
 
 ## Summarizations
@@ -73,15 +74,18 @@ This contingency table shows the overall number of shares by weekday. A higher n
 ```{r weekday_contingency}
 GDAtools::wtable(TP$weekday, w = TP$shares)
 ```
+
 Here is the contingency table for best keywords shares by weekdays
 ```{r weekday_contingency_bestkeyword_shares}
 GDAtools::wtable(TP$weekday, w = TP$kw_max_max)
 ```
+
 Here is contingency table for the number of maximum shares of an article that
 was linked in the article by weekday
 ```{r contingency_self_reference_max}
 GDAtools::wtable(TP$weekday, w = TP$self_reference_max_shares)
 ```
+
 Here are some summary stats by weekday. Again, bigger means more shares.
 
 ```{r weekday_summaries}
@@ -89,12 +93,14 @@ TP %>%
   group_by(weekday) %>%
     summarize(min = min(shares), mean = mean(shares), median = median(shares), iqr = IQR(shares), max = max(shares))
 ```
+
 A higher number  means  more best keywords tend to be shared more often by weekday
 ```{r weekday_summaries_bestKeyword}
 TP %>%
   group_by(weekday) %>%
     summarize(min = min(kw_max_max), mean = mean(kw_max_max), median = median(kw_max_max), stddev=sd(kw_max_max),iqr = IQR(kw_max_max), max = max(kw_max_max))
 ```
+
 Here is the pie chart showing overall which datachannel is doing best
 ```{r piechart}
 df<-newsPop_TP %>% group_by(datachannel) %>% summarise_each(funs(sum))
@@ -104,6 +110,7 @@ lbs<-paste(lbls,"%",sep="")
 pie3D(df$shares,labels=lbs,explode=0.1,
    main="Pie Chart of Shares across datachannels ")
 ```
+
 Here is the bar plot showing bestkeyword shares by weekdays.Heigher means
 for bestkeyword shares on that day
 ```{r bestkeyword_bar}
@@ -187,11 +194,18 @@ round(cor(bus_numeric),2)
 ```
 ## spliting data in train(70%) and test (30%)
 ```{r split_data}
-busIndex <- createDataPartition(y =bus$shares , p= 0.7, list = FALSE)
-bus_Train <- bus[busIndex,]
-bus_Test <- bus[-busIndex,]
+index <- createDataPartition(y =bus$shares , p= 0.7, list = FALSE)
+train <- bus[index,]
+test <- bus[-index,]
 
 ```
+
+```{r corrplot}
+
+c <- cor(bus %>% select(-shares))
+cp <- corrplot(c, order = 'AOE', cl.pos = 'n', tl.cex = 0.5)
+```
+
 
 ## Linear Regression Modeling
 IPSITA TODO: Brief explanation of the idea of a linear regression model
@@ -211,9 +225,39 @@ Linear models are a way of describing a response variable in terms of a linear c
 #               trControl = trainControl(method = "cv",number = 5),
 #              tuneGrid = data.frame(mtry = seq(1,10,1)))
 ```
-VICTORIA TODO: Fit linear regression and
 
-## Ensemble tree-based modeling
+This linear regression model chooses its predictors based on excluding any variable that has a correlation coefficient of above 0.3 or below -0.3 with any other variable. This should choose varibles for each channel.
+```{r select_vars}
+cTib <- as_tibble(c) %>%
+  mutate(v1 = names(as_tibble(c))) %>%
+    pivot_longer(cols = !v1, names_to = "v2", values_to = "corr") %>%
+      filter(abs(corr) > 0.3 & v1 != v2)
+
+exclude <- distinct(cTib, v1) %>% 
+  unlist() %>% 
+    unname()
+
+vChan <- bus %>%
+  select(-all_of(exclude))
+
+vIndex <- createDataPartition(y =vChan$shares , p= 0.7, list = FALSE)
+vTrain <- vChan[vIndex,]
+vTest <- vChan[-vIndex,]
+
+```
+
+This is the model. It is pre-processed with centering and scaling and it uses 10-fold CV. The variables involved may vary from channel to channel.
+```{r v_linreg}
+vMod <- train(
+  shares ~ .,
+  data = vTrain,
+  method = "lm",
+  preProcess = c("center","scale"),
+  trControl = trainControl(method = "cv", number = 10)
+)
+```
+
+### Ensemble tree-based modeling
 To do an ensemble tree-based model,we created a new column called popularity and add it to the trsining and test dataset.If the number of shares is greater than 2500, then popularity is equal to 1 (popular) , otherwise 0 (unpopular).
 ```{r add_binary_column}
 Train_glm<- bus_Train %>% 
@@ -223,8 +267,10 @@ Test_glm<-bus_Test %>%
           mutate(popularity = if_else((shares >= 1500),1,0)) %>%
           select(-shares) 
 ```
-IPSITA TODO:randomforest model
-VICTORIA TODO:  boosted tree model
+
+### Boosted tree model
+
+I'm not sure how to calculate what's necessary for the tunegrid. WIll get back to this.
 
 ## Comparison
 
