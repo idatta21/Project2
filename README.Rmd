@@ -222,12 +222,6 @@ Linear models are a way of describing a response variable in terms of a linear c
 
 splitting data in train(70%) and test (30%)
 
-```{r split_data}
-Index <- createDataPartition(y = subNews$shares , p= 0.7, list = FALSE)
-Train <- subNews[Index,]
-Test <- subNews[-Index,]
-```
-
 ### First Linear Model
 
 ```{r split_data}
@@ -340,7 +334,13 @@ vBoost <- train(
 )
 ```
 
+```{r boost_test}
+pr <- predict(vBoost, newdata = Test)
+boostTest <-round(postResample(pr, obs = Test$shares), 4)
+```
+
 ## Comparison
+
 We have created 4 models - 2 linear regression model,1 Random Forest Model and 1
 Boosted tree model. Here in this given data set, we are trying to predict the 
 number of shares of a news article .
