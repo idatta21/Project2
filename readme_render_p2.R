@@ -1,9 +1,15 @@
 ## The render code to output the .md files
-## Automation
-source("./README.RMD")
+
+library(tidyverse)
+
+newsPop <- read_csv("./Data/OnlineNewsPopularity.csv")
+
+channel <- newsPop %>%
+  select(starts_with("data_channel_is_")) %>%
+  names
 
 out <- paste0(channel, ".md")
-params = lapply(channel, FUN = function(x){list(channel = x)})
+params <- lapply(channel, FUN = function(x){list(channel = x)})
 
 docs <- tibble(out, params)
 

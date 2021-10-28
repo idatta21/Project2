@@ -3,7 +3,7 @@ title: "Project 2"
 author: "Ipsita Datta & Victoria Seng"
 date: "10/15/2021"
 params:
-  channel: data_channel_is_bus
+  channel: data_channel_is_bus # this is here for the initial knit of this .RMD file. The separate render code will overwrite it later.
 ---
 
 ```{r setup, include=FALSE}
@@ -20,7 +20,16 @@ Predictors include day of the week on which the article was published, keywords 
 
 We will do some exploratory analysis of the variables and fit four models: two linear regression models, and two ensemble tree-based models, a random forest and a boosted tree. 
 
-## Data
+### Links to Channel Reports
+
+*  [Business](data_channel_is_bus.md)
+*  [Entertainment](data_channel_is_entertainment.md)
+*  [Lifestyle](data_channel_is_lifestyle.md)
+*  [Social Media](data_channel_is_socmed.md)
+*  [Technology](data_channel_is_tech.md)
+*  [World News](data_channel_is_world.md)
+
+### Libraries
 
 ```{r libs, echo = FALSE}
 library(tidyverse)
@@ -31,6 +40,8 @@ library(corrplot)
 library(plotrix)
 set.seed(300)
 ```
+
+## Data
 
 First, we import the news popularity data csv. We'll also pull the channel names for later use.
 
@@ -61,7 +72,7 @@ subNews <- newsTP %>%
 
 ## Summaries
 
-For the first few summaries, we will use this transposed data that turns the binary weekday variables into one categorical varible.
+For the first few summaries, we will use this transposed data that turns the binary weekday variables into one categorical variable.
 
 ```{r transpose_weekdays}
 TP <- subNews %>%
@@ -120,8 +131,8 @@ pie3D(df$shares,labels=lbs,explode=0.1,
    main="Pie Chart of Shares across datachannels ")
 ```
 
-Here is the bar plot showing bestkeyword shares by weekdays.Higher means
-for bestkeyword shares on that day
+Here is the bar plot showing best keyword shares by weekdays. Higher means
+for best keyword shares on that day
 ```{r bestkeyword_bar}
 plot1<-ggplot(TP,aes(x=weekday,y=kw_max_max,fill=weekday))
 plot1+ geom_col() + 
@@ -214,17 +225,16 @@ A linear regression model describes the relationship between a dependent variabl
 
 Linear models are a way of describing a response variable in terms of a linear combination of predictor variables.  
 
-splitting data in train(70%) and test (30%)
-
 ### First Linear Model
 
+splitting data in train(70%) and test (30%)
 ```{r split_data}
 Index <- createDataPartition(y = subNews$shares , p= 0.7, list = FALSE)
 Train <- subNews[Index,]
 Test <- subNews[-Index,]
 ```
 
-Based on the p-values and correlation coefficients  , the predictors are added to
+Based on the p-values and correlation coefficients, the predictors are added to
 the model to predict shares.
 ```{r Linear_Regression,echo=FALSE}
 
@@ -265,7 +275,7 @@ vTest <- vChan[-vIndex,]
 
 ```
 
-This is the model. It is pre-processed with centering and scaling and it uses 10-fold CV. The variables involved may vary from channel to channel.
+This is the model. It is pre-processed with centering and scaling and it uses 10-fold CV. The variables involved may vary from channel to channel as described above.
 
 ```{r v_linreg}
 vMod <- train(
@@ -280,8 +290,6 @@ vPred <- predict(vMod, newdata = vTest)
 v_linreg<-round(postResample(vPred, obs = vTest$shares), 4)
 round(postResample(vPred, obs = vTest$shares), 4)
 ```
-
-### Ensemble tree-based modeling
 
 ### Random Forest model
  A random forest model is a supervised learning algorithm which extend the idea of bagging method  to solve regression or classification problems. It creates multiple trees from bootstrap samples like as bagging method and then use a random subset of predictors for each bootstrap sample/tree fit. It doesn't use all the predictor.
@@ -306,6 +314,8 @@ rf_test<-round(postResample(pred, obs = Test$shares),4)
 
 ### Boosted tree model
 
+The boosted tree model slowly builds
+
 ```{r vBoostTree, results = FALSE}
 vBoost <- train(
   shares ~ ., 
@@ -316,6 +326,7 @@ vBoost <- train(
 )
 ```
 
+Trying out the boosted tree model on the test data.
 ```{r boost_test}
 pr <- predict(vBoost, newdata = Test)
 boostTest <-round(postResample(pr, obs = Test$shares), 4)
@@ -324,10 +335,10 @@ boostTest <-round(postResample(pr, obs = Test$shares), 4)
 ## Comparison
 
 We have created 4 models - 2 linear regression model,1 Random Forest Model and 1 Boosted tree model. Here in this given data set, we are trying to predict the number of shares of a news article .
-We are comparing four model with respect to their RMSE.Model with lowest RMSE works best.
+We are comparing four model with respect to their RMSE. Model with lowest RMSE works best.
 ```{r comparison}
 
-tab<-matrix(round(c(lm_Test[1],v_linreg[1],rf_test[1]),boostTest[1],1))
+tab<-matrix(round(c(lm_Test[1],v_linreg[1],rf_test[1],boostTest[1]),1))
  
 colnames(tab) <- c('RMSE')
 rownames(tab) <- c('LM1','LM2','RandomForest','Boosted')
@@ -336,4 +347,44 @@ print(tab)
 
 ```
 
+## Automation
 
+The render code is run from readme_render_p2.R
+
+Here is the un-evaluated render code:
+
+```{r render_code, eval = FALSE}
+## The render code to output the .md files
+
+library(tidyverse)
+
+newsPop <- read_csv("./Data/OnlineNewsPopularity.csv")
+
+channel <- newsPop %>%
+  select(starts_with("data_channel_is_")) %>%
+  names
+
+out <- paste0(channel, ".md")
+params <- lapply(channel, FUN = function(x){list(channel = x)})
+
+docs <- tibble(out, params)
+
+apply(
+  docs, 
+  MARGIN = 1, 
+  FUN = function(x){
+    rmarkdown::render(input = "./README.Rmd", 
+                      output_file = x[[1]], 
+                      output_format = "github_document",
+                      output_dir = "./", 
+                      output_options = list(
+                        toc = FALSE, 
+                        html_preview = FALSE, 
+                        keep_html = FALSE
+                      ),
+                      params = x[[2]]
+    )
+  }
+)
+
+```

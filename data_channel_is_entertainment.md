@@ -20,6 +20,17 @@ We will do some exploratory analysis of the variables and fit four
 models: two linear regression models, and two ensemble tree-based
 models, a random forest and a boosted tree.
 
+### Links to Channel Reports
+
+-   [Business](data_channel_is_bus.md)
+-   [Entertainment](data_channel_is_entertainment.md)
+-   [Lifestyle](data_channel_is_lifestyle.md)
+-   [Social Media](data_channel_is_socmed.md)
+-   [Technology](data_channel_is_tech.md)
+-   [World News](data_channel_is_world.md)
+
+### Libraries
+
 ## Data
 
 First, we import the news popularity data csv. We’ll also pull the
@@ -35,10 +46,6 @@ channel <- newsPop %>%
 
 Next, we subset the channel for use in the initial EDA and model
 fitting.
-
-NOTE: Ipsita, this is very similar to your data transformation for the
-pie chart, but I didn’t substring the channel names. We can edit to use
-just one of these but I’m putting this here for now.
 
 ``` r
 newsTP <- newsPop %>%
@@ -57,7 +64,7 @@ subNews <- newsTP %>%
 ## Summaries
 
 For the first few summaries, we will use this transposed data that turns
-the binary weekday variables into one categorical varible.
+the binary weekday variables into one categorical variable.
 
 ``` r
 TP <- subNews %>%
@@ -158,8 +165,8 @@ pie3D(df$shares,labels=lbs,explode=0.1,
 
 ![](./images/piechart-1.png)<!-- -->
 
-Here is the bar plot showing bestkeyword shares by weekdays.Heigher
-means for bestkeyword shares on that day
+Here is the bar plot showing best keyword shares by weekdays. Higher
+means for best keyword shares on that day
 
 ``` r
 plot1<-ggplot(TP,aes(x=weekday,y=kw_max_max,fill=weekday))
@@ -254,9 +261,9 @@ g1 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
 
 ![](./images/negative_words_V_shares_scatterplot-1.png)<!-- -->
 
-Here is the scatter plot showing poins in the middle has more share as a
-function of number of words in the title. On Left of the graph with less
-word in the title has less share by weekdays
+Here is the scatter plot showing points in the middle has more share as
+a function of number of words in the title. On Left of the graph with
+less word in the title has less share by weekdays
 
 ``` r
 g2 <- ggplot(data = subNews, aes(n_tokens_title, shares))
@@ -269,13 +276,6 @@ g2 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
 ```
 
 ![](./images/wordsIntitle-1.png)<!-- -->
-
-To find correlation coefficient between shares and other
-variable,subsetting dataset with only numeric variables
-
-``` r
-bus_numeric<-dplyr::select_if(subNews,is.numeric)
-```
 
 This correlation plot visually shows the positive or negative
 correlation coefficient between the various predictor varibles. The
@@ -299,6 +299,8 @@ and x1 to xn are independent variable (also called predictors)
 Linear models are a way of describing a response variable in terms of a
 linear combination of predictor variables.
 
+### First Linear Model
+
 splitting data in train(70%) and test (30%)
 
 ``` r
@@ -307,23 +309,21 @@ Train <- subNews[Index,]
 Test <- subNews[-Index,]
 ```
 
-### First Linear Model
+Based on the p-values and correlation coefficients, the predictors are
+added to the model to predict shares.
 
 Performance on Test data set for Linear Regression model
 
 ``` r
 pred <- predict(lmfit, newdata =Test)
-round(postResample(pred, obs = Test$shares),4)
+lm_Test<-round(postResample(pred, obs = Test$shares),4)
 ```
-
-    ##      RMSE  Rsquared       MAE 
-    ## 8808.3762    0.0109 2948.4047
 
 ### Second Linear Model
 
 This linear regression model chooses its predictors based on excluding
 any variable that has a correlation coefficient of above 0.3 or below
--0.3 with any other variable. This should choose varibles for each
+-0.3 with any other variable. This should choose variables for each
 channel.
 
 ``` r
@@ -345,8 +345,8 @@ vTest <- vChan[-vIndex,]
 ```
 
 This is the model. It is pre-processed with centering and scaling and it
-uses 10-fold CV. The variables involved may vary from channel to
-channel.
+uses 10-fold CV. The variables involved may vary from channel to channel
+as described above.
 
 ``` r
 vMod <- train(
@@ -358,29 +358,41 @@ vMod <- train(
 )
 
 vPred <- predict(vMod, newdata = vTest)
+v_linreg<-round(postResample(vPred, obs = vTest$shares), 4)
 round(postResample(vPred, obs = vTest$shares), 4)
 ```
 
     ##      RMSE  Rsquared       MAE 
     ## 6927.5297    0.0049 2910.4953
 
-### Ensemble tree-based modeling
+### Random Forest model
 
-To do an ensemble tree-based model,we created a new column called
-popularity and add it to the trsining and test dataset. If the number of
-shares is greater than 2500, then popularity is equal to 1 (popular) ,
-otherwise 0 (unpopular).
+A random forest model is a supervised learning algorithm which extend
+the idea of bagging method to solve regression or classification
+problems. It creates multiple trees from bootstrap samples like as
+bagging method and then use a random subset of predictors for each
+bootstrap sample/tree fit. It doesn’t use all the predictor.
 
 ``` r
-Train_glm<- Train %>% 
-            mutate(popularity = if_else((shares >= 1500),1,0)) %>%
-            select(-shares)
-Test_glm<- Test %>%
-          mutate(popularity = if_else((shares >= 1500),1,0)) %>%
-          select(-shares) 
+randomforestFit <- train(
+               shares ~ .,
+               data = Train,
+               method = "rf",
+               preProcess = c("center", "scale"),
+               trControl = trainControl(method = "cv",number = 5),
+               tuneGrid = data.frame(mtry = seq(1,10,1)))
+```
+
+Performance on Test data set for Randomforest model
+
+``` r
+pred <- predict(randomforestFit, newdata =Test)
+rf_test<-round(postResample(pred, obs = Test$shares),4)
 ```
 
 ### Boosted tree model
+
+The boosted tree model slowly builds
 
 ``` r
 vBoost <- train(
@@ -392,6 +404,72 @@ vBoost <- train(
 )
 ```
 
+Trying out the boosted tree model on the test data.
+
+``` r
+pr <- predict(vBoost, newdata = Test)
+boostTest <-round(postResample(pr, obs = Test$shares), 4)
+```
+
 ## Comparison
 
-ID
+We have created 4 models - 2 linear regression model,1 Random Forest
+Model and 1 Boosted tree model. Here in this given data set, we are
+trying to predict the number of shares of a news article . We are
+comparing four model with respect to their RMSE. Model with lowest RMSE
+works best.
+
+``` r
+tab<-matrix(round(c(lm_Test[1],v_linreg[1],rf_test[1],boostTest[1]),1))
+ 
+colnames(tab) <- c('RMSE')
+rownames(tab) <- c('LM1','LM2','RandomForest','Boosted')
+print(tab)
+```
+
+    ##                RMSE
+    ## LM1          8808.4
+    ## LM2          6927.5
+    ## RandomForest 8879.9
+    ## Boosted      8813.8
+
+## Automation
+
+The render code is run from readme\_render\_p2.R
+
+Here is the un-evaluated render code:
+
+``` r
+## The render code to output the .md files
+
+library(tidyverse)
+
+newsPop <- read_csv("./Data/OnlineNewsPopularity.csv")
+
+channel <- newsPop %>%
+  select(starts_with("data_channel_is_")) %>%
+  names
+
+out <- paste0(channel, ".md")
+params <- lapply(channel, FUN = function(x){list(channel = x)})
+
+docs <- tibble(out, params)
+
+apply(
+  docs, 
+  MARGIN = 1, 
+  FUN = function(x){
+    rmarkdown::render(input = "./README.Rmd", 
+                      output_file = x[[1]], 
+                      output_format = "github_document",
+                      output_dir = "./", 
+                      output_options = list(
+                        toc = FALSE, 
+                        html_preview = FALSE, 
+                        keep_html = FALSE
+                      ),
+                      params = x[[2]]
+    )
+  }
+)
+```
