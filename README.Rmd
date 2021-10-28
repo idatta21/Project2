@@ -120,7 +120,7 @@ pie3D(df$shares,labels=lbs,explode=0.1,
    main="Pie Chart of Shares across datachannels ")
 ```
 
-Here is the bar plot showing bestkeyword shares by weekdays.Heigher means
+Here is the bar plot showing bestkeyword shares by weekdays.Higher means
 for bestkeyword shares on that day
 ```{r bestkeyword_bar}
 plot1<-ggplot(TP,aes(x=weekday,y=kw_max_max,fill=weekday))
@@ -200,12 +200,6 @@ g2 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") +
     scale_y_continuous(labels = scales::comma) 
 ```
 
-To find correlation coefficient between shares and other variable,subsetting
-dataset with only numeric variables
-
-```{r TP_numeric_correlation}
-bus_numeric<-dplyr::select_if(subNews,is.numeric)
-```
 
 This correlation plot visually shows the positive or negative correlation coefficient between the various predictor varibles. The larger the circle and more saturated the color, the stronger the correlation. Blue is negative, and red is positive.
 
@@ -235,8 +229,9 @@ the model to predict shares.
 ```{r Linear_Regression,echo=FALSE}
 
 lmfit<-train(shares ~ num_hrefs+kw_max_avg+weekday_is_saturday+weekday_is_sunday+
-title_subjectivity+global_sentiment_polarity+LDA_01+LDA_04+rate_positive_words+
-num_imgs+num_videos,data = Train, method = "lm", 
+title_subjectivity+global_sentiment_polarity+LDA_01+LDA_04+rate_positive_words+num_imgs+num_videos,
+data = Train, 
+method = "lm", 
 preProcess = c("center", "scale"),
 trControl = trainControl(method = "cv", number = 10))
 ```
@@ -289,11 +284,7 @@ round(postResample(vPred, obs = vTest$shares), 4)
 ### Ensemble tree-based modeling
 
 ### Random Forest model
- A random forest model is a supervised learning algorithm which extend the idea
- of bagging method  to solve regression or classification problems. It creates
- multiple trees from bootstrap samples like as bagging method and then use a
- random subset of predictors for each bootstrap sample/tree fit. It doesn't use 
- all the predictor.
+ A random forest model is a supervised learning algorithm which extend the idea of bagging method  to solve regression or classification problems. It creates multiple trees from bootstrap samples like as bagging method and then use a random subset of predictors for each bootstrap sample/tree fit. It doesn't use all the predictor.
  
 ```{r ,cache=TRUE}
 randomforestFit <- train(
@@ -305,21 +296,12 @@ randomforestFit <- train(
                tuneGrid = data.frame(mtry = seq(1,10,1)))
 
 ```
-# Performance on Test data set for Randomforest model
+
+ Performance on Test data set for Randomforest model
+ 
 ```{r final_model}
 pred <- predict(randomforestFit, newdata =Test)
 rf_test<-round(postResample(pred, obs = Test$shares),4)
-```
-
-To do an ensemble tree-based model,we created a new column called popularity and add it to the trsining and test dataset. If the number of shares is greater than 2500, then popularity is equal to 1 (popular) , otherwise 0 (unpopular).
-
-```{r add_binary_column}
-Train_glm<- Train %>% 
-            mutate(popularity = if_else((shares >= 1500),1,0)) %>%
-            select(-shares)
-Test_glm<- Test %>%
-          mutate(popularity = if_else((shares >= 1500),1,0)) %>%
-          select(-shares) 
 ```
 
 ### Boosted tree model
@@ -341,16 +323,14 @@ boostTest <-round(postResample(pr, obs = Test$shares), 4)
 
 ## Comparison
 
-We have created 4 models - 2 linear regression model,1 Random Forest Model and 1
-Boosted tree model. Here in this given data set, we are trying to predict the 
-number of shares of a news article .
-We are comparing four model with respect to their RMSE.
+We have created 4 models - 2 linear regression model,1 Random Forest Model and 1 Boosted tree model. Here in this given data set, we are trying to predict the number of shares of a news article .
+We are comparing four model with respect to their RMSE.Model with lowest RMSE works best.
 ```{r comparison}
-# need to add boosted RMSE on test
-tab<-matrix(round(c(lm_Test[1],v_linreg[1],rf_test[1]),1))
+
+tab<-matrix(round(c(lm_Test[1],v_linreg[1],rf_test[1]),boostTest[1],1))
  
 colnames(tab) <- c('RMSE')
-rownames(tab) <- c('LM1','LM2','RandomForest')
+rownames(tab) <- c('LM1','LM2','RandomForest','Boosted')
 print(tab)
 
 
