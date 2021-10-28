@@ -318,7 +318,7 @@ round(postResample(pred, obs = Test$shares),4)
 
 ### Boosted tree model
 
-The boosted tree model slowly builds
+The boosted tree model slowly trains a model by sequentially growing trees. As trees grow, or are modified from original data, predictions update. For this boosted tree model, I allowed the train function to select the theta, B, and d paramaters.
 
 ```{r vBoostTree, results = FALSE}
 vBoost <- train(

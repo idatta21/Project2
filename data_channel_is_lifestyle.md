@@ -172,17 +172,19 @@ means for best keyword shares on that day
 plot1<-ggplot(TP,aes(x=weekday,y=kw_max_max,fill=weekday))
 plot1+ geom_col() + 
   scale_x_discrete("weekday") + 
-  ggtitle("bestkeyword shares across weekdays")+
+  ggtitle("Bestkeyword shares across weekdays")+
   scale_y_continuous(labels = scales::comma)
 ```
 
 ![](./images/bestkeyword_bar-1.png)<!-- -->
 
+Here is bar graph shows number of shares by weekdays.
+
 ``` r
 plot2<-ggplot(TP,aes(x=weekday,y=shares,fill=weekday))
 plot2+ geom_col() + 
   scale_x_discrete("weekday") + 
-  ggtitle(" shares across weekdays")+
+  ggtitle(" Shares across Weekdays")+
   scale_y_continuous(labels = scales::comma)
 ```
 
@@ -231,9 +233,9 @@ those articles has zero or one image.
 ``` r
 g <- ggplot(data = subNews, aes(num_imgs, shares))
 g + geom_point( position = "jitter") + 
-  labs(x = "num_imgs", 
+  labs(x = "Number ofimages", 
        y = "Number of Shares", 
-       title = "num_imgs vs Number of Shares "
+       title = "Number of images vs Number of Shares "
        ) + 
     scale_y_continuous(labels = scales::comma)
 ```
@@ -252,9 +254,9 @@ a weekend.
 ``` r
 g1 <- ggplot(data = subNews, aes(rate_negative_words, shares))
 g1 + geom_point(aes(color = as_factor(is_weekend)), position = "jitter") + 
-  labs(x = "negative words rate", 
+  labs(x = "Negative words rate", 
        y = "Number of Shares", 
-       title = "negative words rate vs Number of Shares by Weekend Status",
+       title = "Negative words rate vs Number of Shares by Weekend Status",
        color = "Weekend? (1 = Yes, 0 = No)") + 
     scale_y_continuous(labels = scales::comma) 
 ```
@@ -312,12 +314,25 @@ Test <- subNews[-Index,]
 Based on the p-values and correlation coefficients, the predictors are
 added to the model to predict shares.
 
+``` r
+lmfit<-train(shares ~ num_hrefs+kw_max_avg+weekday_is_saturday+weekday_is_sunday+
+title_subjectivity+global_sentiment_polarity+LDA_01+LDA_04+rate_positive_words+num_imgs+num_videos,
+data = Train, 
+method = "lm", 
+preProcess = c("center", "scale"),
+trControl = trainControl(method = "cv", number = 10))
+```
+
 Performance on Test data set for Linear Regression model
 
 ``` r
 pred <- predict(lmfit, newdata =Test)
 lm_Test<-round(postResample(pred, obs = Test$shares),4)
+round(postResample(pred, obs = Test$shares),4)
 ```
+
+    ##      RMSE  Rsquared       MAE 
+    ## 11485.775     0.000  3663.345
 
 ### Second Linear Model
 
@@ -375,12 +390,12 @@ bootstrap sample/tree fit. It doesn’t use all the predictor.
 
 ``` r
 randomforestFit <- train(
-               shares ~ .,
-               data = Train,
-               method = "rf",
-               preProcess = c("center", "scale"),
-               trControl = trainControl(method = "cv",number = 5),
-               tuneGrid = data.frame(mtry = seq(1,10,1)))
+      shares ~ .,
+      data = Train,
+      method = "rf",
+      preProcess = c("center", "scale"),
+      trControl = trainControl(method = "repeatedcv", number = 5, repeats = 3),
+      tuneGrid = data.frame(mtry = seq(1,10,1)))
 ```
 
 Performance on Test data set for Randomforest model
@@ -388,11 +403,18 @@ Performance on Test data set for Randomforest model
 ``` r
 pred <- predict(randomforestFit, newdata =Test)
 rf_test<-round(postResample(pred, obs = Test$shares),4)
+round(postResample(pred, obs = Test$shares),4)
 ```
+
+    ##       RMSE   Rsquared        MAE 
+    ## 11480.0105     0.0046  4412.1589
 
 ### Boosted tree model
 
-The boosted tree model slowly builds
+The boosted tree model slowly trains a model by sequentially growing
+trees. As trees grow, or are modified from original data, predictions
+update. For this boosted tree model, I allowed the train function to
+select the theta, B, and d paramaters.
 
 ``` r
 vBoost <- train(
@@ -409,29 +431,38 @@ Trying out the boosted tree model on the test data.
 ``` r
 pr <- predict(vBoost, newdata = Test)
 boostTest <-round(postResample(pr, obs = Test$shares), 4)
+round(postResample(pr, obs = Test$shares), 4)
 ```
+
+    ##       RMSE   Rsquared        MAE 
+    ## 11443.3843     0.0001  3686.0659
 
 ## Comparison
 
-We have created 4 models - 2 linear regression model,1 Random Forest
-Model and 1 Boosted tree model. Here in this given data set, we are
-trying to predict the number of shares of a news article . We are
-comparing four model with respect to their RMSE. Model with lowest RMSE
-works best.
+Here we read in and analyze an online news popularity data set, we are
+trying to predict the number of shares of a news article .We have
+created different report based on the data channels of the news article
+.We used four method to compare which model works best or will be a good
+fit to predict the number of shares for future articles to
+published.Therefore,we are comparing four model with respect to their
+RMSE. Model with lowest RMSE works best.
 
 ``` r
-tab<-matrix(round(c(lm_Test[1],v_linreg[1],rf_test[1],boostTest[1]),1))
- 
-colnames(tab) <- c('RMSE')
-rownames(tab) <- c('LM1','LM2','RandomForest','Boosted')
-print(tab)
+tab<-data.frame(Models=c('LM1','LM2','RandomForest','Boosted'),
+               RMSE=round(c(lm_Test[1],v_linreg[1],rf_test[1],boostTest[1]),1))
+
+winner<-tab %>% slice_min(RMSE,n=1)
+# Models with their RMSE
+tab
 ```
 
-    ##                 RMSE
-    ## LM1          11485.8
-    ## LM2           9319.5
-    ## RandomForest 11254.2
-    ## Boosted      11367.7
+    ##         Models    RMSE
+    ## 1          LM1 11485.8
+    ## 2          LM2  9319.5
+    ## 3 RandomForest 11480.0
+    ## 4      Boosted 11443.4
+
+For this channel winner model is LM2, 9319.5 .
 
 ## Automation
 
