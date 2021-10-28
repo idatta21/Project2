@@ -3,7 +3,7 @@ title: "Project 2"
 author: "Ipsita Datta & Victoria Seng"
 date: "10/15/2021"
 params:
-  channel: data_channel_is_bus # this is here for the initial knit of this .RMD file. The separate render code will overwrite it later.
+  channel: "data_channel_is_bus"
 ---
 
 ```{r setup, include=FALSE}
